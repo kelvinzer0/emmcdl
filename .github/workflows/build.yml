@@ -1,5 +1,3 @@
-name: Build EMMC_DL Win32 Release
-
 on:
   workflow_dispatch:
   push:
@@ -13,16 +11,14 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1.1
+      uses: microsoft/setup-msbuild@v2
 
-    - name: Setup Visual Studio environment
-      run: call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
-      shell: cmd
+    # REMOVE the "Setup Visual Studio environment" step completely
       
-    - name: Restore NuGet packages (if needed)
+    - name: Restore NuGet packages
       run: nuget restore emmcdl.win32.sln
       shell: cmd
 
@@ -34,5 +30,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: emmcdl-release
-        path: |
-          emmcdl\bin\Release\
+        path: emmcdl\bin\Release\
