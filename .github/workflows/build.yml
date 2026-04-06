@@ -1,6 +1,7 @@
 name: Build EMMC_DL Win32 Release
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
