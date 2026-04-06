@@ -1,9 +1,9 @@
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 jobs:
   build-win32:
@@ -15,55 +15,54 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Restore NuGet packages
-        run: nuget restore emmcdl.win32.sln
-        shell: cmd
+      - name: Create stub fdevent.h
+        shell: pwsh
+        run: |
+          @'
+          #pragma once
+          #ifndef FDEVENT_H
+          #define FDEVENT_H
+          typedef struct fdevent {
+              struct fdevent *next;
+              struct fdevent *prev;
+              int    fd;
+              int    clfd;
+              unsigned short state;
+              unsigned short events;
+              void (*func)(int fd, unsigned events, void *userdata);
+              void  *arg;
+          } fdevent;
+          #endif
+          '@ | Set-Content -Encoding UTF8 inc\fdevent.h
 
-      - name: Fix forward-slash path in vcxproj
+      - name: Create stub mutex_list.h
+        shell: pwsh
+        run: |
+          @'
+          #pragma once
+          /* mutex list stub for Windows build */
+          '@ | Set-Content -Encoding UTF8 inc\mutex_list.h
+
+      - name: Fix vcxproj - rename diskwriter.cpp to diskwriter_windows.cpp
         shell: pwsh
         run: |
           $file = "emmcdl.win32.vcxproj"
           $content = [System.IO.File]::ReadAllText($file)
-          # Fix /src/diskwriter.cpp -> src\diskwriter.cpp
-          $content = $content.Replace('/src/diskwriter.cpp', 'src\diskwriter.cpp')
+          $content = $content.Replace('src\diskwriter.cpp', 'src\diskwriter_windows.cpp')
           [System.IO.File]::WriteAllText($file, $content)
-          # Verify fix
-          if ($content -match '/src/diskwriter') {
-            Write-Error "Path fix FAILED - still contains forward slash path"
-          } else {
-            Write-Host "Path fix OK"
-          }
+          Write-Host "vcxproj fixed:"
+          Select-String "diskwriter" $file
 
-      - name: Patch sysdeps.h - replace all Linux-only includes with Windows stubs
-        shell: pwsh
-        run: |
-          $file = "inc\sysdeps.h"
-          $content = [System.IO.File]::ReadAllText($file)
-          
-          # Guard ALL known Linux/Android-only headers in one pass
-          $linuxHeaders = @('fdevent.h', 'mutex_list.h', 'transport.h', 'adb.h', 'adb_trace.h')
-          foreach ($h in $linuxHeaders) {
-            $pattern = "(#include\s+`"$h`")"
-            $replacement = "#ifndef _WIN32`n`$1`n#endif"
-            $content = [regex]::Replace($content, $pattern, $replacement)
-          }
-          
-          [System.IO.File]::WriteAllText($file, $content)
-          Write-Host "sysdeps.h patched successfully"
-          # Show lines around the patched areas
-          $lines = $content -split "`n"
-          for ($i = 0; $i -lt $lines.Count; $i++) {
-            if ($lines[$i] -match 'fdevent|mutex_list|_WIN32') {
-              Write-Host "Line $($i+1): $($lines[$i])"
-            }
-          }
+      - name: Restore NuGet packages
+        run: nuget restore emmcdl.win32.sln
+        shell: cmd
 
       - name: Build emmcdl Win32 Release
         run: msbuild emmcdl.win32.sln /p:Platform=Win32 /p:Configuration=Release /p:PlatformToolset=v143
         shell: cmd
 
-      - name: Upload Release artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: emmcdl-release
-          path: Release\
+          name: emmcdl-win32-release
+          path: Release\emmcdl.exe
