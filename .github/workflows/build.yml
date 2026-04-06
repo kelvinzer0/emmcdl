@@ -1,0 +1,37 @@
+name: Build EMMC_DL Win32 Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-win32:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Setup Visual Studio environment
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
+
+    - name: Restore NuGet packages (if needed)
+      run: nuget restore emmcdl.win32.sln
+      shell: cmd
+
+    - name: Build emmcdl Win32 Release
+      run: msbuild emmcdl.win32.sln /p:Platform=Win32 /p:Configuration=Release
+      shell: cmd
+
+    - name: Upload Release artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: emmcdl-release
+        path: |
+          emmcdl\bin\Release\
