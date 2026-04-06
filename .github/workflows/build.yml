@@ -19,9 +19,9 @@ jobs:
       uses: microsoft/setup-msbuild@v1.1
 
     - name: Setup Visual Studio environment
-      run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
-
+      run: call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
+      shell: cmd
+      
     - name: Restore NuGet packages (if needed)
       run: nuget restore emmcdl.win32.sln
       shell: cmd
