@@ -15,15 +15,13 @@ jobs:
 
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
-
-    # REMOVE the "Setup Visual Studio environment" step completely
       
     - name: Restore NuGet packages
       run: nuget restore emmcdl.win32.sln
       shell: cmd
 
     - name: Build emmcdl Win32 Release
-      run: msbuild emmcdl.win32.sln /p:Platform=Win32 /p:Configuration=Release
+      run: msbuild emmcdl.win32.sln /p:Platform=Win32 /p:Configuration=Release /p:PlatformToolset=v143
       shell: cmd
 
     - name: Upload Release artifact
