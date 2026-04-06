@@ -8,24 +8,39 @@ on:
 jobs:
   build-win32:
     runs-on: windows-latest
-
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-      
-    - name: Restore NuGet packages
-      run: nuget restore emmcdl.win32.sln
-      shell: cmd
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
-    - name: Build emmcdl Win32 Release
-      run: msbuild emmcdl.win32.sln /p:Platform=Win32 /p:Configuration=Release /p:PlatformToolset=v143
-      shell: cmd
+      - name: Restore NuGet packages
+        run: nuget restore emmcdl.win32.sln
+        shell: cmd
 
-    - name: Upload Release artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: emmcdl-release
-        path: emmcdl\bin\Release\
+      - name: Fix forward-slash path in vcxproj
+        shell: pwsh
+        run: |
+          $file = "emmcdl.win32.vcxproj"
+          $content = Get-Content $file -Raw
+          $content = $content -replace '"/src/', '"src\'
+          Set-Content $file $content
+
+      - name: Patch sysdeps.h to guard Linux-only fdevent.h
+        shell: pwsh
+        run: |
+          $file = "inc\sysdeps.h"
+          $content = Get-Content $file -Raw
+          $content = $content -replace '(#include\s+"fdevent\.h")', "#ifndef _WIN32`n`$1`n#endif"
+          Set-Content $file $content
+
+      - name: Build emmcdl Win32 Release
+        run: msbuild emmcdl.win32.sln /p:Platform=Win32 /p:Configuration=Release /p:PlatformToolset=v143
+        shell: cmd
+
+      - name: Upload Release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: emmcdl-release
+          path: emmcdl\bin\Release\
